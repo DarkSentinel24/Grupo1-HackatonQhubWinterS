@@ -6,7 +6,7 @@ from qiskit.quantum_info import Statevector
 
 from configuracion import *
 from assets import cargar_activos, cargar_sprite_gato
-from ui import dibujar_panel, dibujar_menu, dibujar_titulo_final
+from ui import dibujar_panel, dibujar_menu, dibujar_instrucciones, dibujar_titulo_final
 from formato_qubit import formatear_estado
 
 pygame.init()
@@ -76,12 +76,22 @@ ESTADO_MENU = "menu"
 ESTADO_JUGANDO = "playing"
 ESTADO_VICTORIA = "victory"
 ESTADO_DERROTA = "defeat"
+ESTADO_INSTRUCCIONES = "instructions"
 estado = ESTADO_MENU
 boton_jugar = pygame.Rect(450, 300, 300, 70)
-boton_salir = pygame.Rect(450, 400, 300, 70)
+boton_instrucciones = pygame.Rect(450, 390, 300, 70)
+boton_salir = pygame.Rect(450, 480, 300, 70)
+boton_regresar = pygame.Rect(450, 470, 300, 70)
 tiempo_inicio_victoria = 0
 tiempo_inicio_derrota = 0
 objetivo_colapso = 0
+INSTRUCCIONES = (
+    """Tu objetivo es colapsar al estado objetivo.\nModifica la superposición de tu qubit
+    recolectando las compuertas H, X, Y, Z, S y T que caen.\nColapsa la medida de tu qubit
+    con el medidor de la parte derecha.\nEn la parte superior podrás visualizar el estado actual
+    de tu qubit, las probabilidades de colapsar a 0 y a 1, y tu puntaje actual.\nSi consigues 5 
+    puntos, ganas.\nSi llegas a -5 puntos, pierdes."""
+)
 
 
 def reiniciar_juego():
@@ -116,9 +126,13 @@ while run:
                 if boton_jugar.collidepoint(e.pos):
                     reiniciar_juego()
                     estado = ESTADO_JUGANDO
+                elif boton_instrucciones.collidepoint(e.pos):
+                    estado = ESTADO_INSTRUCCIONES
                 elif boton_salir.collidepoint(e.pos):
                     pygame.quit()
                     sys.exit()
+            elif estado == ESTADO_INSTRUCCIONES and boton_regresar.collidepoint(e.pos):
+                estado = ESTADO_MENU
 
     teclas = pygame.key.get_pressed()
 
@@ -212,7 +226,9 @@ while run:
     screen.fill(NEGRO)
 
     if estado == ESTADO_MENU:
-        dibujar_menu(screen, bg, qucat_title_img, boton_jugar, boton_salir)
+        dibujar_menu(screen, bg, qucat_title_img, boton_jugar, boton_salir, boton_instrucciones)
+    elif estado == ESTADO_INSTRUCCIONES:
+        dibujar_instrucciones(screen, bg, INSTRUCCIONES, boton_regresar)
     elif estado == ESTADO_JUGANDO:
         screen.blit(bg, (0, 0))
 
