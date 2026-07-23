@@ -5,8 +5,8 @@ import random
 import superposition
 from qiskit.quantum_info import Statevector
 
-pygame.init() # Init pygame
-W, H = 1200, 600 # Screen setup
+pygame.init()
+W, H = 1200, 600
 
 screen = pygame.display.set_mode((W, H))
 pygame.display.set_caption("QuCat")
@@ -15,17 +15,12 @@ screen_size = screen.get_size()
 
 clock = pygame.time.Clock()
 
-# create a surface object, image is drawn on it.
-imp = pygame.image.load("img/fondo.jpeg").convert()
-bg = pygame.transform.scale(imp, screen_size)
-
-# Using blit to copy content from one surface to other
+fondo = pygame.image.load("img/fondo.jpeg").convert()
+bg = pygame.transform.scale(fondo, screen_size)
 screen.blit(bg, (0, 0))
 
-# paint screen one time
 pygame.display.flip()
 
-# Colores
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
@@ -40,7 +35,11 @@ font = pygame.font.SysFont(None, 36)
 
 # Paddle and block
 player = pygame.Rect(W // 2 - 60, H - 150, 50, 50)
+
 suelo = pygame.Rect(0, H - 100, W, H//5)
+tam_suelo = suelo.size
+suelo_img = pygame.image.load("img/suelo.jpeg")
+suelo_final = pygame.transform.scale(suelo_img, tam_suelo)
 
 # Compuertas
 block = pygame.Rect(random.randint(0, W - 50), 0, 50, 50)
@@ -155,7 +154,7 @@ while run:
         text_surface = font.render("Z", True, BLACK)
         pygame.draw.rect(screen, GREEN, block)
 
-    text_qubit = font.render("Estado actual: " + str(qubit.data[0]) + " |0> " + str(qubit.data[1]) + " |1>", True, WHITE)
+    text_qubit = font.render("Estado actual: " + str(qubit.data[0]) + " |0> + " + str(qubit.data[1]) + " |1>", True, WHITE)
     text_puntos = font.render("Puntos: " + str(puntos), True, WHITE)
 
     pygame.draw.rect(screen, BLACK, suelo)
@@ -170,6 +169,8 @@ while run:
 
     screen.blit(text_medidor, (W - 175, H - 200))
     screen.blit(medidor_img, medidor)
+
+    screen.blit(suelo_final, suelo)
 
     pygame.display.flip()
 
