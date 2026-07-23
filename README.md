@@ -59,14 +59,31 @@ Grupo1-HackatonQhubWinterS/
 
 ## Requisitos
 
-Para ejecutar este proyecto en Python, se requieren las siguientes dependencias:
+Este proyecto está desarrollado para ejecutarse con:
 
-- `pygame`
-- `qiskit`
+- Python 3.11
+- Conda (Miniconda o Anaconda)
 
-Puede instalarse todo con el siguiente comando:
+### Dependencias principales
+
+| Librería | Versión recomendada | Uso dentro del proyecto |
+| --- | --- | --- |
+| `pygame` | `>= 2.5.0` | Renderizar la ventana del videojuego, manejar eventos, sonidos, sprites y la interfaz gráfica. |
+| `qiskit` | `>= 1.0.0` | Modelar el comportamiento del qubit, aplicar compuertas cuánticas y simular el colapso de la medición. |
+
+### Instalación
+
+Se puede instalar el entorno con Conda o con `pip` usando el archivo `requirements.txt`:
 
 ```bash
+pip install -r requirements.txt
+```
+
+O bien, con Conda:
+
+```bash
+conda create -n qucat python=3.11
+conda activate qucat
 pip install -r requirements.txt
 ```
 
