@@ -27,6 +27,38 @@ font = pygame.font.SysFont(None, 36)
 menu_font = pygame.font.SysFont(None, 72)
 button_font = pygame.font.SysFont(None, 48)
 player_height = 120
+qucat_title_img = pygame.image.load("img/QuCatTitulo.png").convert_alpha()
+victoria_title_img = pygame.image.load("img/titulo_victoria.png").convert_alpha()
+defeat_title_img = pygame.image.load("img/titulo_derrota.png").convert_alpha()
+
+
+def remove_green_background(surface):
+    result = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    for y in range(surface.get_height()):
+        for x in range(surface.get_width()):
+            r, g, b, a = surface.get_at((x, y))
+            if a == 0:
+                result.set_at((x, y), (0, 0, 0, 0))
+                continue
+
+            is_green_background = (
+                g > 100 and
+                g > r + 20 and
+                g > b + 20 and
+                abs(g - r) > 25 and
+                abs(g - b) > 25
+            )
+
+            if is_green_background:
+                result.set_at((x, y), (0, 0, 0, 0))
+            else:
+                result.set_at((x, y), (r, g, b, a))
+    return result
+
+
+qucat_title_img = remove_green_background(qucat_title_img)
+victoria_title_img = remove_green_background(victoria_title_img)
+defeat_title_img = remove_green_background(defeat_title_img)
 
 player = pygame.Rect(W // 2 - 60, H - 100 - player_height, player_height, player_height)
 player_direction = 1
@@ -62,18 +94,23 @@ tam_suelo = suelo.size
 suelo_img = pygame.image.load("img/suelo.jpeg")
 suelo_final = pygame.transform.scale(suelo_img, tam_suelo)
 
-medidor = pygame.Rect(W - 150, H - 300, 46, 46)
-text_medidor = font.render("Medidor", True, RED)
-medidor_img = pygame.image.load("img/boton_medidor.jpg")
+medidor = pygame.Rect(W - 160, H - 315, 60, 60)
+medidor_font = pygame.font.SysFont(None, 28)
+text_medidor = medidor_font.render("MEDIDOR", True, WHITE)
+text_medidor_shadow = medidor_font.render("MEDIDOR", True, BLUE)
+medidor_img = pygame.transform.smoothscale(pygame.image.load("img/medidor.jpeg"), (60, 60))
 
 block = pygame.Rect(random.randint(0, W - 50), 0, 50, 50)
-compuertas = ["H", "X", "Y", "Z"]
+compuertas = ["H", "X", "Y", "Z", "S", "T"]
 compuerta_H_img = pygame.image.load("img/compuerta_H.png").convert_alpha()
 compuerta_X_img = pygame.image.load("img/compuerta_X.png").convert_alpha()
 compuerta_Y_img = pygame.image.load("img/compuerta_Y.png").convert_alpha()
 compuerta_Z_img = pygame.image.load("img/compuerta_Z.png").convert_alpha()
+compuerta_S_img = pygame.image.load("img/compuerta_S.jpeg").convert()
+compuerta_T_img = pygame.image.load("img/compuerta_T.jpeg").convert()
 compuerta_actual = "H"
 b_speed = 2
+base_b_speed = 2
 compuertas_recolectadas = []
 
 text_surface = font.render("H", True, BLACK)
@@ -87,6 +124,7 @@ sonido_compuerta = pygame.mixer.Sound("sfx/get_gate.mp3.mpeg")
 sonido_salto = pygame.mixer.Sound("sfx/pixel_jump_sound.mp3.mpeg")
 sonido_medicion = pygame.mixer.Sound("sfx/medicion.mp3.mpeg")
 sonido_victoria = pygame.mixer.Sound("sfx/victoria.mp3.mpeg")
+sonido_game_over = pygame.mixer.Sound("sfx/game_over.mp3.mpeg")
 
 FLOOR_Y = suelo.top
 
@@ -102,19 +140,21 @@ score = 0
 STATE_MENU = "menu"
 STATE_PLAYING = "playing"
 STATE_VICTORY = "victory"
+STATE_DEFEAT = "defeat"
 state = STATE_MENU
-play_button = pygame.Rect(450, 220, 300, 70)
-exit_button = pygame.Rect(450, 320, 300, 70)
+play_button = pygame.Rect(450, 300, 300, 70)
+exit_button = pygame.Rect(450, 400, 300, 70)
 victory_start_time = 0
+defeat_start_time = 0
+objetivo_colapso = 0
 
 
 def reset_game():
-    global player, block, compuerta_actual, compuertas_recolectadas, qubit, medido, puntos, score, isjump, v, player_direction, player_frame
+    global player, block, compuerta_actual, compuertas_recolectadas, qubit, medido, puntos, score, isjump, v, player_direction, player_frame, objetivo_colapso
     player = pygame.Rect(W // 2 - 60, H - 100 - player_height, player_height, player_height)
     block = pygame.Rect(random.randint(0, W - 50), 0, 50, 50)
     compuerta_actual = random.choice(compuertas)
     compuertas_recolectadas = []
-    qubit = Statevector.from_label('0')
     medido = False
     puntos = 0
     score = 0
@@ -122,40 +162,90 @@ def reset_game():
     v = v_0
     player_direction = 1
     player_frame = 0
+    objetivo_colapso = random.choice([0, 1])
+    qubit = Statevector.from_label('1' if objetivo_colapso == 0 else '0')
 
 
 reset_game()
 
 
+def draw_menu_button(text, rect, border_color=WHITE):
+    panel = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    panel.fill((0, 0, 0, 180))
+    pygame.draw.rect(panel, border_color, panel.get_rect(), 2)
+
+    text_surface = button_font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect(center=(rect.width // 2, rect.height // 2))
+    panel.blit(text_surface, text_rect)
+    screen.blit(panel, rect.topleft)
+
+
 def draw_menu():
     screen.blit(bg, (0, 0))
-    title = menu_font.render("QuCat", True, WHITE)
-    title_rect = title.get_rect(center=(W // 2, 100))
+    title = pygame.transform.scale(qucat_title_img, (600, 300))
+    title_rect = title.get_rect(center=(W // 2, 150))
     screen.blit(title, title_rect)
 
-    pygame.draw.rect(screen, WHITE, play_button)
-    pygame.draw.rect(screen, WHITE, exit_button)
-
-    play_text = button_font.render("Jugar", True, BLACK)
-    exit_text = button_font.render("Salir", True, BLACK)
-    screen.blit(play_text, play_text.get_rect(center=play_button.center))
-    screen.blit(exit_text, exit_text.get_rect(center=exit_button.center))
+    draw_menu_button("Jugar", play_button)
+    draw_menu_button("Salir", exit_button)
 
 
 def draw_victory():
     screen.blit(bg, (0, 0))
-    victory_text = menu_font.render("¡Victoria!", True, WHITE)
-    victory_rect = victory_text.get_rect(center=(W // 2, H // 2))
-    screen.blit(victory_text, victory_rect)
+    victory_title = pygame.transform.scale(victoria_title_img, (600, 350))
+    victory_rect = victory_title.get_rect(center=(W // 2, H // 2 - 20))
+    screen.blit(victory_title, victory_rect)
+
+
+def draw_defeat():
+    screen.blit(bg, (0, 0))
+    defeat_title = pygame.transform.scale(defeat_title_img, (600, 350))
+    defeat_rect = defeat_title.get_rect(center=(W // 2, H // 2 - 20))
+    screen.blit(defeat_title, defeat_rect)
+
+
+def format_component(value):
+    if abs(value) < 1e-9:
+        return "0.000"
+    rounded = round(value, 3)
+    if abs(rounded) < 1e-9:
+        return "0.000"
+    return f"{rounded:.3f}"
 
 
 def format_state_amplitude(value):
-    amplitude = abs(value.real)
-    if abs(amplitude - 0.7071067811865476) < 1e-6:
-        return "√2/2" if value.real >= 0 else "-√2/2"
-    if abs(amplitude) < 1e-9:
-        return "0"
-    return str(round(value.real, 4)).rstrip("0").rstrip(".")
+    real = value.real
+    imag = value.imag
+
+    if abs(real) < 1e-9 and abs(imag) < 1e-9:
+        return "0.000"
+
+    if abs(imag) < 1e-9:
+        return format_component(real)
+
+    if abs(real) < 1e-9:
+        imag_text = format_component(abs(imag))
+        if imag >= 0:
+            return f"{imag_text}i"
+        return f"-{imag_text}i"
+
+    real_text = format_component(real)
+    imag_text = format_component(abs(imag))
+    if imag >= 0:
+        return f"({real_text} + {imag_text}i)"
+    return f"({real_text} - {imag_text}i)"
+
+
+def format_state_display(amplitude0, amplitude1):
+    term0 = format_state_amplitude(amplitude0)
+    term1 = format_state_amplitude(amplitude1)
+
+    sign1 = "+" if amplitude1.real >= 0 and amplitude1.imag >= 0 else "-"
+    abs_term1 = term1.lstrip("-")
+
+    if sign1 == "+":
+        return f"{term0} |0> + {abs_term1} |1>"
+    return f"{term0} |0> - {abs_term1} |1>"
 
 
 def draw_hud_panel(text_surface, rect, border_color=WHITE):
@@ -197,6 +287,12 @@ while run:
             player_direction = 1
             player_moving = True
 
+        b_speed = base_b_speed + (puntos * 0.15) - (max(0, -puntos) * 0.10)
+        if b_speed < 1.0:
+            b_speed = 1.0
+        if b_speed > 5.5:
+            b_speed = 5.5
+
         block.y += b_speed
 
         if block.colliderect(player):
@@ -212,20 +308,25 @@ while run:
             sonido_medicion.play()
             resultado = superposition.colapsar_qubit(qubit)
             qubit = Statevector.from_label('0')
-            if resultado[0] == '0':
-                puntos -= 1
+            resultado_collapse = int(resultado[0])
+
+            if resultado_collapse == objetivo_colapso:
+                puntos += 1
                 text_colapso = font.render(
-                                        "Último colapso: 0 (Perdiste 1 punto)",
+                                        f"Último colapso: {resultado_collapse} (Correcto: +1 punto)",
                                         True,
                                         WHITE,
                                     )
             else:
-                puntos += 1
+                puntos -= 1
                 text_colapso = font.render(
-                                        "Último colapso: 1 (Ganaste 1 punto)",
+                                        f"Último colapso: {resultado_collapse} (Incorrecto: -1 punto)",
                                         True,
                                         WHITE,
                                     )
+
+            objetivo_colapso = random.choice([0, 1])
+            qubit = Statevector.from_label('1' if objetivo_colapso == 0 else '0')
             medido = True
 
         if block.y >= suelo.top:
@@ -252,8 +353,17 @@ while run:
             state = STATE_VICTORY
             victory_start_time = pygame.time.get_ticks()
 
+        if puntos <= -5:
+            sonido_game_over.play()
+            state = STATE_DEFEAT
+            defeat_start_time = pygame.time.get_ticks()
+
     elif state == STATE_VICTORY:
         if pygame.time.get_ticks() - victory_start_time >= 5000:
+            state = STATE_MENU
+
+    elif state == STATE_DEFEAT:
+        if pygame.time.get_ticks() - defeat_start_time >= 5000:
             state = STATE_MENU
 
     screen.fill(BLACK)
@@ -275,34 +385,46 @@ while run:
             "X": pygame.transform.scale(compuerta_X_img, block.size),
             "Y": pygame.transform.scale(compuerta_Y_img, block.size),
             "Z": pygame.transform.scale(compuerta_Z_img, block.size),
+            "S": pygame.transform.scale(compuerta_S_img, block.size),
+            "T": pygame.transform.scale(compuerta_T_img, block.size),
         }[compuerta_actual]
         screen.blit(gate_image, block)
 
+        prob_0 = abs(qubit.data[0]) ** 2
+        prob_1 = abs(qubit.data[1]) ** 2
+
         text_qubit = font.render(
-            "Estado actual: "
-            + format_state_amplitude(qubit.data[0])
-            + " |0> + "
-            + format_state_amplitude(qubit.data[1])
-            + " |1>",
+            "Estado: " + format_state_display(qubit.data[0], qubit.data[1]),
+            True,
+            WHITE,
+        )
+        text_probabilidades = font.render(
+            f"P(0)={prob_0:.2%}   P(1)={prob_1:.2%}",
             True,
             WHITE,
         )
         text_puntos = font.render("Puntos: " + str(puntos), True, WHITE)
+        text_objetivo = font.render(f"Objetivo: Colapsar a {objetivo_colapso}", True, WHITE)
 
         pygame.draw.rect(screen, BLACK, suelo)
         pygame.draw.rect(screen, WHITE, medidor)
 
-        draw_hud_panel(text_qubit, pygame.Rect(10, 15, 700, 52))
+        draw_hud_panel(text_qubit, pygame.Rect(10, 15, 560, 52))
+        draw_hud_panel(text_probabilidades, pygame.Rect(585, 15, 340, 52))
         draw_hud_panel(text_puntos, pygame.Rect(W - 240, 15, 220, 52))
 
-        screen.blit(text_medidor, (W - 175, H - 250))
         screen.blit(medidor_img, medidor)
+        screen.blit(text_medidor_shadow, (W - 173, H - 248))
+        screen.blit(text_medidor, (W - 175, H - 250))
         screen.blit(suelo_final, suelo)
 
         draw_hud_panel(text_colapso, pygame.Rect(20, H - 65, 520, 52))
+        draw_hud_panel(text_objetivo, pygame.Rect(W - 300, H - 65, 280, 52))
 
     elif state == STATE_VICTORY:
         draw_victory()
+    elif state == STATE_DEFEAT:
+        draw_defeat()
 
     pygame.display.flip()
     clock.tick(60)
