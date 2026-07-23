@@ -84,6 +84,9 @@ text_puntos = font.render("Puntos: 0", True, BLACK)
 text_colapso = font.render(" ", True, WHITE)
 
 sonido_compuerta = pygame.mixer.Sound("sfx/get_gate.mp3.mpeg")
+sonido_salto = pygame.mixer.Sound("sfx/pixel_jump_sound.mp3.mpeg")
+sonido_medicion = pygame.mixer.Sound("sfx/medicion.mp3.mpeg")
+sonido_victoria = pygame.mixer.Sound("sfx/victoria.mp3.mpeg")
 
 FLOOR_Y = suelo.top
 
@@ -146,6 +149,25 @@ def draw_victory():
     screen.blit(victory_text, victory_rect)
 
 
+def format_state_amplitude(value):
+    amplitude = abs(value.real)
+    if abs(amplitude - 0.7071067811865476) < 1e-6:
+        return "√2/2" if value.real >= 0 else "-√2/2"
+    if abs(amplitude) < 1e-9:
+        return "0"
+    return str(round(value.real, 4)).rstrip("0").rstrip(".")
+
+
+def draw_hud_panel(text_surface, rect, border_color=WHITE):
+    panel = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    panel.fill((0, 0, 0, 160))
+    pygame.draw.rect(panel, border_color, panel.get_rect(), 2)
+
+    text_rect = text_surface.get_rect(center=(rect.width // 2, rect.height // 2))
+    panel.blit(text_surface, text_rect)
+    screen.blit(panel, rect.topleft)
+
+
 run = True
 while run:
     for e in pygame.event.get():
@@ -187,6 +209,7 @@ while run:
             compuerta_actual = random.choice(compuertas)
 
         if medidor.colliderect(player) and not medido:
+            sonido_medicion.play()
             resultado = superposition.colapsar_qubit(qubit)
             qubit = Statevector.from_label('0')
             if resultado[0] == '0':
@@ -211,6 +234,7 @@ while run:
             block.x = random.randint(0, W - 50)
 
         if not isjump and keys[pygame.K_SPACE]:
+            sonido_salto.play()
             isjump = True
             v = v_0
 
@@ -223,7 +247,8 @@ while run:
                 player.y = H - 100 - player_height
                 medido = False
 
-        if puntos >= 10:
+        if puntos >= 5:
+            sonido_victoria.play()
             state = STATE_VICTORY
             victory_start_time = pygame.time.get_ticks()
 
@@ -254,7 +279,11 @@ while run:
         screen.blit(gate_image, block)
 
         text_qubit = font.render(
-            "Estado actual: " + str(qubit.data[0]) + " |0> + " + str(qubit.data[1]) + " |1>",
+            "Estado actual: "
+            + format_state_amplitude(qubit.data[0])
+            + " |0> + "
+            + format_state_amplitude(qubit.data[1])
+            + " |1>",
             True,
             WHITE,
         )
@@ -262,12 +291,16 @@ while run:
 
         pygame.draw.rect(screen, BLACK, suelo)
         pygame.draw.rect(screen, WHITE, medidor)
-        screen.blit(text_puntos, (W - 200, 20))
-        screen.blit(text_qubit, (10, 20))
+
+        draw_hud_panel(text_qubit, pygame.Rect(10, 15, 700, 52))
+        draw_hud_panel(text_puntos, pygame.Rect(W - 240, 15, 220, 52))
+
         screen.blit(text_medidor, (W - 175, H - 250))
         screen.blit(medidor_img, medidor)
         screen.blit(suelo_final, suelo)
-        screen.blit(text_colapso, (20, H - 40))
+
+        draw_hud_panel(text_colapso, pygame.Rect(20, H - 65, 520, 52))
+
     elif state == STATE_VICTORY:
         draw_victory()
 
