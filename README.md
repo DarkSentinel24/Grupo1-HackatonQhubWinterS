@@ -69,3 +69,9 @@ Puede instalarse todo con el siguiente comando:
 ```bash
 pip install -r requirements.txt
 ```
+
+## Video Demo
+
+```text
+https://youtu.be/HgSh1QcNgJ8
+```
