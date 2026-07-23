@@ -4,24 +4,7 @@ import sys
 import superposicion
 from qiskit.quantum_info import Statevector
 
-from configuracion import (
-    ANCHO,
-    ALTO,
-    PANTALLA,
-    RELOJ,
-    BLANCO,
-    ROJO,
-    AZUL,
-    NEGRO,
-    FUENTE,
-    FUENTE_MENU,
-    FUENTE_BOTON,
-    FUENTE_MEDIDOR,
-    ALTURA_JUGADOR,
-    VELOCIDAD_BASE_CAIDA,
-    VELOCIDAD_SALTO,
-    GRAVEDAD,
-)
+from configuracion import *
 from assets import cargar_activos, cargar_sprite_gato
 from ui import dibujar_panel, dibujar_menu, dibujar_titulo_final
 from formato_qubit import formatear_estado
