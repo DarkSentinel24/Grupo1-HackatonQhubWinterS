@@ -37,6 +37,7 @@ Grupo1-HackatonQhubWinterS/
 ├── README.md                                # Documentación del proyecto
 ├── LICENSE                                  # Licencia del repositorio
 ├── .gitignore                               # Archivos ignorados por Git
+├── .vscode/                                 # Configuración del entorno de VS Code
 │
 ├── img/                                     # Activos gráficos del juego
 │   ├── fondo.jpeg
